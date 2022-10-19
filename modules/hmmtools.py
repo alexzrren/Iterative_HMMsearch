@@ -1,6 +1,5 @@
-#!/home/renzirui/miniconda3/bin/python
-
 import sys
+
 
 def read_hmm(input = 'stdin'):
     if input == 'stdin':

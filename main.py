@@ -6,17 +6,95 @@ from datetime import datetime
 from glob import glob
 import time
 import progressbar
-sys.path.append("modules/")
-import hmmtools as hmmtools
+sys.path.append(os.path.join(os.path.split(sys.argv[0])[0]), "modules/")
+import hmmtools
 #import stockholmtools as stockholmtools
-import seqtools as seqtools
+import seqtools
+import argparse
+import subprocess
 
 
 def main():
-    #Step1: hmm2seq
-    hmmblocks = hmmtools.read_hmm(input='iter0_full.hmm')
-    #print(hmmblocks)
-    hmmtools.hmm2seq(hmmblocks)
+    parser = cmd_argparse()
+    args = parser.parse_args()
+    if not argcheck(args):
+        parser.print_usage(file=sys.stderr)
+        sys.exit(1)
+    if not prerequisites():
+        sys.exit(1)
+    printargs(args)
+    
+
+def argcheck(args):
+    if not os.path.exists(os.path.join(os.getcwd(), args.query)):
+        sys.stderr.write('[ERRO] Cannot access query input %s: No such file or directory\n' % (args.query))
+        return False
+    else:
+        if not os.access(args.query, os.R_OK):
+            sys.stderr.write('[ERRO] Cannot access query input %s: Permission denied\n' % (args.query))
+            return False
+            
+    if not os.path.exists(args.output):
+        sys.stderr.write('[ERRO] Cannot access output directory %s: No such file or directory\n' % (args.output))
+        return False
+    else:
+        if not os.path.isdir(args.output):
+            sys.stderr.write('[ERRO] Cannot write to output directory %s: Is a File, not a directory\n' % (args.output))
+            return False
+        if not os.access(args.output, os.W_OK):
+            sys.stderr.write('[ERRO] Cannot write to output directory %s: Permission denied\n' % (args.output))
+            return False
+        
+    if not os.path.exists(os.path.join(os.getcwd(), args.hmmdb)):
+        sys.stderr.write('[ERRO] Cannot access hmmdb %s: No such file or directory\n' % (args.hmmdb))
+        return False
+    else:
+        if not os.access(args.hmmdb, os.R_OK):
+            sys.stderr.write('[ERRO] Cannot access hmmdb %s: Permission denied\n' % (args.hmmdb))
+            return False
+    return True
+    
+
+def cmd_argparse():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-q', '--query', metavar='<FASTA>', help='input query orf sequences in FASTA format', required=True)
+    parser.add_argument('-o', '--output', metavar='<OUTPUT_DIRECTORY>', help='output and intermediate file directory', required=True)
+    parser.add_argument('-d', '--hmmdb', metavar='<HMM_FILE>', help='hmm profile of ', required=True)
+    parser.add_argument('--threads', help='threads number assigned in iterative hmmsearch [4]', default=4, type=int, metavar='INT')
+    parser.add_argument('--evalue', metavar='FLOAT', help='Evalue threshold in iterative hmmsearch [1e-10]', default='1e-10', type=str)
+    parser.add_argument('--iteration', metavar='INT', help='Iteration times of hmmsearch [10]', default=10, type=int)
+    parser.add_argument('--motifcov', metavar='FLOAT', help='Motif coverage cutoff of hmmsearch results [0.80]', default=0.80, type=float)
+    parser.add_argument('--iterstart', metavar='INT', help='Manually assign start point of iteration for additional iteration or rerun at breakpoint [1]', default=1, type=int)
+    return parser
+
+
+def check_command(command):
+    code, _ = subprocess.getstatusoutput(command)
+    if code == 127:
+        return False
+    else:
+        return True
+
+
+def prerequisites():
+    command_used = ['seqkit', 'hmmsearch', 'hmmbuild', 'hmmpress', 'cd-hit']
+    for command in command_used:
+        if not check_command(command):
+            print('[ERRO] %s not found, please install it first or add it into $PATH manually' % command)
+            return False
+    return True
+
+
+def printargs(args):
+    print('IterativeHMM_RdRpFinder v0.2a\n\nAuthor:Zirui Ren <renzirui@genomics.cn>\n\n###  alpha version  ###\n')
+    print('='*35+'\n'+"       Search Configurations\n"+'—'*35)
+    print("%+13s%s%s" % ('Query',' : ', args.query))
+    print("%+13s%s%s" %("Output"," : ", args.output))
+    print("%+13s%s%s" %("HMMdb"," : ", args.hmmdb))
+    print("%+13s%s%s" %("Threads"," : ", args.threads))
+    print("%+13s%s%s" %("IterationNum"," : ", args.iteration))
+    print("%+13s%s%s" %("MotifCov"," : ", args.motifcov))
+    print("%+13s%s%s\n" %("IterStart"," : ", args.iterstart)+ '='*35 + '\n')
 
 
 def curtime():
@@ -30,11 +108,6 @@ def runcommand(command):
     stdout, stderr = p.communicate()
     code = p.returncode
     return(code, stdout, stderr)
-
-
-def run_palmscan():
-    (code, stdout, stderr) = runcommand("palmscan -search_pp %s -rdrp -ppout pp.fa -report pp.txt -fevout.pp.fev")
-    return code
 
 
 def parse_palmfev(fevfile):
@@ -128,11 +201,11 @@ def seqkit_grep(seqid_list, fastain, fastaout):
         sys.exit(1)
 
 
-def iterative_hmmsearch(query, ncpu=4, wdir='/home/renzirui/Analysis/Iterative_hmmsearch'):
+def iterative_hmmsearch(query, ncpu=4, wdir='/home/renzirui/Analysis/hmmsearch_final'):
     sys.stderr.write('-----------------------Iterative_hmmsearch-------------------------\n')
     if not os.path.exists(os.path.join(wdir, 'builded_hmm')):
         os.mkdir(os.path.join(wdir, 'builded_hmm'))
-    for i in range(1, 11):
+    for i in range(1, 2):
         sys.stderr.write('##Iteration %d\n' % i)
         iter_wdir = os.path.join(wdir, 'Iteration_%d' % i)
         if not os.path.exists(iter_wdir):
@@ -152,7 +225,7 @@ def iterative_hmmsearch(query, ncpu=4, wdir='/home/renzirui/Analysis/Iterative_h
 
         #Step01. hmmsearch_run
         _t2 = time.time()
-        os.system('/home/renzirui/miniconda3/bin/hmmsearch --cpu {ncpu} -E 1e-10 -o /dev/null -A {wdir}/Iteration_{iter}/hmmsearch.aln --tblout {wdir}/Iteration_{iter}/hmmsearch.tblout --domtblout {wdir}/Iteration_{iter}/hmmsearch.domtblout {wdir}/builded_hmm/iter{last_iter}_full.hmm {query}'.format(ncpu=ncpu, wdir=wdir, query=query, iter=i, last_iter=i-1))
+        code = os.system('/home/renzirui/miniconda3/bin/hmmsearch --cpu {ncpu} -E 1e-10 -o /dev/null -A {wdir}/Iteration_{iter}/hmmsearch.aln --tblout {wdir}/Iteration_{iter}/hmmsearch.tblout --domtblout {wdir}/Iteration_{iter}/hmmsearch.domtblout {wdir}/builded_hmm/iter{last_iter}_full.hmm {query}'.format(ncpu=ncpu, wdir=wdir, query=query, iter=i, last_iter=i-1))
         _t3 = time.time()
         (code, stdout, _) = runcommand("cat %s/hmmsearch.domtblout | grep -v '#' | awk '{print $1}' | sort -u | wc -l" % (iter_wdir))
         num_hitseq = stdout.decode().strip()
@@ -245,5 +318,4 @@ def iterative_hmmsearch(query, ncpu=4, wdir='/home/renzirui/Analysis/Iterative_h
         
 
 if __name__ == '__main__':
-    #main()
-    iterative_hmmsearch('/home/renzirui/Analysis/Iterative_hmmsearch/allORFs_clean_withPublic.faa', ncpu=12, wdir='/home/renzirui/Analysis/Iterative_hmmsearch_v2')
+    main()
