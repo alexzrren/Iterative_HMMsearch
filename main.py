@@ -6,7 +6,8 @@ from datetime import datetime
 from glob import glob
 import time
 import progressbar
-sys.path.append(os.path.join(os.path.split(sys.argv[0])[0]), "modules/")
+sys.path.append(os.path.join(os.path.split(sys.argv[0])[0], "modules/"))
+print(os.path.join(os.path.split(sys.argv[0])[0], "modules/"))
 import hmmtools
 #import stockholmtools as stockholmtools
 import seqtools
@@ -23,6 +24,9 @@ def main():
     if not prerequisites():
         sys.exit(1)
     printargs(args)
+    preprocess(args.output, args.hmmdb)
+    iterative_hmmsearch(args.query, args.output, args.threads, args.iteration)
+    
     
 
 def argcheck(args):
@@ -36,14 +40,16 @@ def argcheck(args):
             
     if not os.path.exists(args.output):
         sys.stderr.write('[ERRO] Cannot access output directory %s: No such file or directory\n' % (args.output))
-        return False
-    else:
-        if not os.path.isdir(args.output):
-            sys.stderr.write('[ERRO] Cannot write to output directory %s: Is a File, not a directory\n' % (args.output))
-            return False
-        if not os.access(args.output, os.W_OK):
-            sys.stderr.write('[ERRO] Cannot write to output directory %s: Permission denied\n' % (args.output))
-            return False
+        try:
+            os.mkdir(args.output)
+            sys.stderr.write('[INFO] Created output directory\n')
+        except:
+            if not os.path.isdir(args.output):
+                sys.stderr.write('[ERRO] Cannot write to output directory %s: Is a File, not a directory\n' % (args.output))
+                return False
+            if not os.access(args.output, os.W_OK):
+                sys.stderr.write('[ERRO] Cannot write to output directory %s: Permission denied\n' % (args.output))
+                return False
         
     if not os.path.exists(os.path.join(os.getcwd(), args.hmmdb)):
         sys.stderr.write('[ERRO] Cannot access hmmdb %s: No such file or directory\n' % (args.hmmdb))
@@ -63,7 +69,7 @@ def cmd_argparse():
     parser.add_argument('--threads', help='threads number assigned in iterative hmmsearch [4]', default=4, type=int, metavar='INT')
     parser.add_argument('--evalue', metavar='FLOAT', help='Evalue threshold in iterative hmmsearch [1e-10]', default='1e-10', type=str)
     parser.add_argument('--iteration', metavar='INT', help='Iteration times of hmmsearch [10]', default=10, type=int)
-    parser.add_argument('--motifcov', metavar='FLOAT', help='Motif coverage cutoff of hmmsearch results [0.80]', default=0.80, type=float)
+    parser.add_argument('--motifcov', metavar='FLOAT', help='Motif coverage cutoff of hmmsearch results [0.75]', default=0.75, type=float)
     parser.add_argument('--iterstart', metavar='INT', help='Manually assign start point of iteration for additional iteration or rerun at breakpoint [1]', default=1, type=int)
     return parser
 
@@ -172,22 +178,21 @@ def cov_calc(range1, range2):
     return cov
 
 
-def rdrp_covfilter(domtblout, iter_time, coverage=0.8):
+def rdrp_covfilter(domtblout, coverage=0.75):
     dfhmm = pd.read_table(domtblout, comment='#', header=None, delim_whitespace=True)
     dfhmm.columns = 'target_name target_accession tlen query_name query_accession qlen seq_evalue seq_score seq_bias domain_# domain_of domain_c-evalue domain_i-evalue domain_score domain_bias hmm_start hmm_end aln_start aln_end env_start env_end acc desc'.split()
-    dfhmm['hmm_coord'] = dfhmm['hmm_start'].astype(str) + ':' + dfhmm['hmm_end'].astype(str)
-    if iter_time > 1:
-        dfhmm['query_name'] = dfhmm['query_name'].apply(lambda x: x.split('fasta_')[0]+'fasta')
-    df_filtered = pd.DataFrame()
-    for query_name, dfquery in dfhmm.groupby('query_name'):
-        try:
-            query_range = dfquery[dfquery['target_name']==query_name].reset_index().loc[0,'hmm_coord']
-        except:
-            continue
-        dfquery['cov'] = dfquery['hmm_coord'].apply(lambda x: cov_calc(x, query_range))
-        filtered_dfquery = dfquery[dfquery['cov']>=coverage]
-        #print(filtered_dfquery)
-        df_filtered = pd.concat([df_filtered, filtered_dfquery])
+    resultlist = []
+    for (target, query), dftarget in dfhmm.groupby(['target_name', 'query_name']):
+        covered = set()
+        for domainid, record in dftarget.set_index('domain_#').iterrows():
+            covered = covered | set(range(record['hmm_start'], record['hmm_end']+1))
+            #print(len(covered))
+        #print('result',len(covered))
+        resultlist.append([target, query, record['seq_score'], len(covered), record['qlen'], len(covered)/record['qlen']])
+
+    dfresultlist = pd.DataFrame(resultlist, columns=['target_name', 'query_name', 'seqscore','covered_length', 'hmm_length', 'coverage'])
+    dfresultlist_rmdup = dfresultlist.sort_values('seqscore', ascending=False).drop_duplicates('target_name', keep='first')
+    df_filtered = dfresultlist_rmdup[dfresultlist_rmdup.coverage >= coverage]
     return df_filtered
 
 
@@ -201,11 +206,17 @@ def seqkit_grep(seqid_list, fastain, fastaout):
         sys.exit(1)
 
 
-def iterative_hmmsearch(query, ncpu=4, wdir='/home/renzirui/Analysis/hmmsearch_final'):
+def preprocess(output, hmmdb):
+    builded_hmm_path = os.path.join(output, 'builded_hmm')
+    if not os.path.exists(builded_hmm_path):
+        os.mkdir(builded_hmm_path)
+    os.system('cp {hmmdb} {buildedhmm_path}/iter0_full.hmm'.format(hmmdb=hmmdb, buildedhmm_path=builded_hmm_path))
+    
+
+def iterative_hmmsearch(query, wdir='/home/renzirui/Analysis/hmmsearch_final', ncpu=4, iteration_num=10):
     sys.stderr.write('-----------------------Iterative_hmmsearch-------------------------\n')
-    if not os.path.exists(os.path.join(wdir, 'builded_hmm')):
-        os.mkdir(os.path.join(wdir, 'builded_hmm'))
-    for i in range(1, 2):
+
+    for i in range(1, iteration_num+1):
         sys.stderr.write('##Iteration %d\n' % i)
         iter_wdir = os.path.join(wdir, 'Iteration_%d' % i)
         if not os.path.exists(iter_wdir):
@@ -219,6 +230,7 @@ def iterative_hmmsearch(query, ncpu=4, wdir='/home/renzirui/Analysis/hmmsearch_f
         code = os.system('/home/renzirui/miniconda3/bin/hmmpress {wdir}/builded_hmm/iter{last_iter}_full.hmm > /dev/null 2>&1'.format(wdir=wdir, last_iter=str(i-1)))
         if code:
             sys.stderr.write(curtime()+'[ERRO] hmmpress exit with code %d\n'%code)
+            sys.exit(1)
         _t1 = time.time()
         sys.stderr.write(curtime()+'[INFO] hmmpress done (Time Elapsed: %.3fs)\n' % (_t1-_t0))
         sys.stderr.write(curtime()+'[INFO] HMM search iteration %d running...\n' % i)
@@ -243,11 +255,13 @@ def iterative_hmmsearch(query, ncpu=4, wdir='/home/renzirui/Analysis/hmmsearch_f
         sys.stderr.write(curtime()+"[INFO] Converted %d records from STOCKHOLM format to FASTA (Time Elapsed: %.3fs)\n" % (count, _t4-_t3))
 
         ##Step02.2 Confirm RdRp Motifs(>80% cov sequence will be kept)
-        filtered_df = rdrp_covfilter(iter_wdir+'/hmmsearch.domtblout', i, coverage=0.8)
+        filtered_df = rdrp_covfilter(iter_wdir+'/hmmsearch.domtblout', coverage=0.75)
+        filtered_df.to_csv(os.path.join(iter_wdir,'profile_covstat.tsv'), sep='\t', index=None)
+        
         #print(filtered_df)
         num_filtered = len(filtered_df['target_name'].drop_duplicates())
         _t5 = time.time()
-        sys.stderr.write(curtime()+"[INFO] %d sequences covered >80%% RdRp motif region (Time Elapsed: %.3fs)\n" % (num_filtered, _t5-_t4))
+        sys.stderr.write(curtime()+"[INFO] %d sequences covered >75%% RdRp motif region (Time Elapsed: %.3fs)\n" % (num_filtered, _t5-_t4))
 
         ##Step02.3 Fetch Confirmed Sequences
         num_profile, num_seq = 0, 0
@@ -255,10 +269,12 @@ def iterative_hmmsearch(query, ncpu=4, wdir='/home/renzirui/Analysis/hmmsearch_f
             num_profile += 1
             seqlist = list(profile_df['target_name'].drop_duplicates())
             num_seq += len(seqlist)
+            '''
             if i > 1:
                 seqkit_grep(seqlist, os.path.join(iter_wdir, 'sto2fas', profile+'_iter%d.fa'%(i-1)), os.path.join(iter_wdir, 'sto2fas', profile+'.filt.fa'))
             else:
-                seqkit_grep(seqlist, os.path.join(iter_wdir, 'sto2fas', profile+'.fa'), os.path.join(iter_wdir, 'sto2fas', profile+'.filt.fa'))
+            '''
+            seqkit_grep(seqlist, os.path.join(iter_wdir, 'sto2fas', profile+'.fa'), os.path.join(iter_wdir, 'sto2fas', profile+'.filt.fa'))
         _t6 = time.time()
         sys.stderr.write(curtime()+"[INFO] %d sequences from %d profiles after filtering written to FASTA (Time Elapsed: %.3fs)\n" % (num_seq, num_profile, _t6-_t5))
 
@@ -274,6 +290,7 @@ def iterative_hmmsearch(query, ncpu=4, wdir='/home/renzirui/Analysis/hmmsearch_f
             code = os.system('cd-hit -d 0 -c 0.8 -aS 0.5 -i {query} -o {result_prefix} -T 4 > {result_prefix}.cdhit.log 2>&1'.format(query=file, result_prefix=os.path.join(cdhit_path, fileprefix)))
             if code:
                 sys.stderr.write(curtime()+'[ERRO] cd-hit exit with code %s\n' % code)
+                sys.exit(1)
         _t7 = time.time()
         sys.stderr.write(curtime()+'[INFO] cd-hit done (Time Elapsed: %.3fs)\n' % (_t7-_t6))
 
@@ -289,10 +306,12 @@ def iterative_hmmsearch(query, ncpu=4, wdir='/home/renzirui/Analysis/hmmsearch_f
             profile = '.'.join(file.split('/')[-1].split('.')[:-1])
             keepseqid = list(dfclus.loc[dfclus['Cluster_Sign_0.8']=='*','Sequence_ID'])
             _num_seq += len(keepseqid)
+            '''
             if i > 1:
                 seqkit_grep(keepseqid, os.path.join(iter_wdir,'sto2fas', profile+'_iter%d.aln'%(i-1)), os.path.join(hmmbuild_msa_path, profile+'_iter%d.aln'%i))
             else:
-                seqkit_grep(keepseqid, os.path.join(iter_wdir,'sto2fas', profile+'.aln'), os.path.join(hmmbuild_msa_path, profile+'_iter%d.aln'%i))
+            '''
+            seqkit_grep(keepseqid, os.path.join(iter_wdir,'sto2fas', profile+'.aln'), os.path.join(hmmbuild_msa_path, '_'.join(profile.split('_')[:-1])+'_iter%d.aln'%i))
 
         _t8 = time.time()
         sys.stderr.write(curtime()+'[INFO] %d MSA seqs for %d profiles fetched (Time Elapsed: %.3fs)\n' % (_num_seq, _count+1, _t8-_t7))
@@ -309,12 +328,13 @@ def iterative_hmmsearch(query, ncpu=4, wdir='/home/renzirui/Analysis/hmmsearch_f
             code = os.system('hmmbuild {hmm_prefix}.hmm {msa_prefix} > {hmm_prefix}.log 2>&1'.format(hmm_prefix=os.path.join(hmmbuild_path, fileprefix), msa_prefix=os.path.join(hmmbuild_msa_path, fileprefix)))
             if code:
                 sys.stderr.write(curtime()+'[ERRO] hmmbuild exit with code %s\n' % code)
+                sys.exit(1)
 
         code = os.system('cat {hmmbuild_path}/*.hmm > {iterative_hmm}'.format(hmmbuild_path=hmmbuild_path, iterative_hmm=os.path.join(wdir, 'builded_hmm', 'iter%d_full.hmm'%i)))
         sys.stderr.write(curtime()+'[INFO] Full iterative hmm file written to %s\n' % (os.path.join(wdir, 'builded_hmm', 'iter%d_full.hmm'%i)))
         _t9 = time.time()
         sys.stderr.write(curtime()+'[INFO] hmmbuild done (Time Elapsed: %.3fs)\n' % (_t9-_t8))
-        sys.stderr.write(curtime()+'[INFO] Iteration 1 finished (Time Elapsed: %.3fs)\n\n\n' % (_t9-_t1))
+        sys.stderr.write(curtime()+'[INFO] Iteration %d finished (Time Elapsed: %.3fs)\n\n\n' % (i, _t9-_t1))
         
 
 if __name__ == '__main__':
