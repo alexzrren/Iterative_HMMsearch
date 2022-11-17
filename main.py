@@ -37,16 +37,18 @@ def argcheck(args):
             return False
             
     if not os.path.exists(args.output):
-        sys.stderr.write('[ERRO] Cannot access output directory %s: No such file or directory\n' % (args.output))
         try:
             os.mkdir(args.output)
-            sys.stderr.write('[INFO] Created output directory\n')
+            sys.stderr.write('[INFO] Output directory created\n')
         except:
             if not os.path.isdir(args.output):
                 sys.stderr.write('[ERRO] Cannot write to output directory %s: Is a File, not a directory\n' % (args.output))
                 return False
-            if not os.access(args.output, os.W_OK):
+            elif not os.access(args.output, os.W_OK):
                 sys.stderr.write('[ERRO] Cannot write to output directory %s: Permission denied\n' % (args.output))
+                return False
+            else:
+                sys.stderr.write('[ERRO] Cannot access output directory %s: No such file or directory\n' % (args.output))
                 return False
         
     if not os.path.exists(os.path.join(os.getcwd(), args.hmmdb)):
@@ -211,7 +213,7 @@ def preprocess(query, output, hmmdb):
     os.system('cp {hmmdb} {buildedhmm_path}/iter0_full.hmm'.format(hmmdb=hmmdb, buildedhmm_path=builded_hmm_path))
     clean_query = os.path.join(output, query.split('/')[-1])
     seqtools.clean_fasta(query, clean_query)
-    
+    sys.stderr.write(curtime()+'[INFO] sequence header cleanup done\n')
     return clean_query
     
 
