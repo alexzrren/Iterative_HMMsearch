@@ -210,7 +210,7 @@ def preprocess(query, output, hmmdb):
         os.mkdir(builded_hmm_path)
     os.system('cp {hmmdb} {buildedhmm_path}/iter0_full.hmm'.format(hmmdb=hmmdb, buildedhmm_path=builded_hmm_path))
     clean_query = os.path.join(output, query.split('/')[-1])
-    seqtools.clean_fasta(query, )
+    seqtools.clean_fasta(query, clean_query)
     
     return clean_query
     
