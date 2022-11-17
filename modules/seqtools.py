@@ -36,6 +36,11 @@ def fasta2dict(file):
     return fastadict
 
 
+def clean_fasta(file, cleanfile):
+    import os
+    os.system('awk \''+'{'+'print $1'+'}'+'\' '+'{file} > {cleanfile}'.format(file=file, cleanfile=cleanfile))
+    
+    
 def read_cdhit(file, identity, length=False):
     """
     This function is to read the result file (cdhit.clstr) of CD-HIT, and convert it in to pandas DataFrame

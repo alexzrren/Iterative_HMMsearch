@@ -1,18 +1,17 @@
-import pandas as pd
-from Bio import SeqIO
 import sys
 import os
-from datetime import datetime
-from glob import glob
+import datetime
+import glob
 import time
+import pandas as pd
+from Bio import SeqIO
 import progressbar
-sys.path.append(os.path.join(os.path.split(sys.argv[0])[0], "modules/"))
-print(os.path.join(os.path.split(sys.argv[0])[0], "modules/"))
-import hmmtools
-#import stockholmtools as stockholmtools
-import seqtools
 import argparse
 import subprocess
+# import custom scripts
+sys.path.append(os.path.join(os.path.split(sys.argv[0])[0], "modules/"))
+import hmmtools
+import seqtools
 
 
 def main():
@@ -24,9 +23,8 @@ def main():
     if not prerequisites():
         sys.exit(1)
     printargs(args)
-    preprocess(args.output, args.hmmdb)
-    iterative_hmmsearch(args.query, args.output, args.threads, args.iteration)
-    
+    cleanquery = preprocess(args.query, args.output, args.hmmdb)
+    iterative_hmmsearch(cleanquery, args.output, args.threads, args.iteration)
     
 
 def argcheck(args):
@@ -104,7 +102,7 @@ def printargs(args):
 
 
 def curtime():
-        time = datetime.now().strftime('%T')+'   '
+        time = datetime.datetime.now().strftime('%T')+'   '
         return time
 
 
@@ -158,9 +156,9 @@ def stockholm2fasta_perprofile(stockholmfile, outdir):
     return count
 
 def hmmpress_cleanup(globpath):
-    globresults = glob(globpath)
+    globresults = glob.glob(globpath)
     if len(globresults):
-        for old_hmmpress in glob(globpath):
+        for old_hmmpress in glob.glob(globpath):
             os.remove(old_hmmpress)
         sys.stderr.write(curtime()+'[WARN] Found old hmmpress results, removed!\n')
 
@@ -206,11 +204,15 @@ def seqkit_grep(seqid_list, fastain, fastaout):
         sys.exit(1)
 
 
-def preprocess(output, hmmdb):
+def preprocess(query, output, hmmdb):
     builded_hmm_path = os.path.join(output, 'builded_hmm')
     if not os.path.exists(builded_hmm_path):
         os.mkdir(builded_hmm_path)
     os.system('cp {hmmdb} {buildedhmm_path}/iter0_full.hmm'.format(hmmdb=hmmdb, buildedhmm_path=builded_hmm_path))
+    clean_query = os.path.join(output, query.split('/')[-1])
+    seqtools.clean_fasta(query, )
+    
+    return clean_query
     
 
 def iterative_hmmsearch(query, wdir='/home/renzirui/Analysis/hmmsearch_final', ncpu=4, iteration_num=10):
@@ -269,11 +271,7 @@ def iterative_hmmsearch(query, wdir='/home/renzirui/Analysis/hmmsearch_final', n
             num_profile += 1
             seqlist = list(profile_df['target_name'].drop_duplicates())
             num_seq += len(seqlist)
-            '''
-            if i > 1:
-                seqkit_grep(seqlist, os.path.join(iter_wdir, 'sto2fas', profile+'_iter%d.fa'%(i-1)), os.path.join(iter_wdir, 'sto2fas', profile+'.filt.fa'))
-            else:
-            '''
+
             seqkit_grep(seqlist, os.path.join(iter_wdir, 'sto2fas', profile+'.fa'), os.path.join(iter_wdir, 'sto2fas', profile+'.filt.fa'))
         _t6 = time.time()
         sys.stderr.write(curtime()+"[INFO] %d sequences from %d profiles after filtering written to FASTA (Time Elapsed: %.3fs)\n" % (num_seq, num_profile, _t6-_t5))
@@ -285,7 +283,7 @@ def iterative_hmmsearch(query, wdir='/home/renzirui/Analysis/hmmsearch_final', n
         except FileExistsError:
             sys.stderr.write(curtime()+'[WARN] path %s exists, content will be overwritten!\n' % cdhit_path)
         bar = progressbar.ProgressBar(widgets=[curtime(), '[INFO] cd-hit clustering profile ',progressbar.SimpleProgress(), ' (', progressbar.Percentage(), ')'])
-        for file in bar(glob(iter_wdir + '/sto2fas/*.filt.fa')):
+        for file in bar(glob.glob(iter_wdir + '/sto2fas/*.filt.fa')):
             fileprefix = '.'.join(file.split('/')[-1].split('.')[:-2])
             code = os.system('cd-hit -d 0 -c 0.8 -aS 0.5 -i {query} -o {result_prefix} -T 4 > {result_prefix}.cdhit.log 2>&1'.format(query=file, result_prefix=os.path.join(cdhit_path, fileprefix)))
             if code:
@@ -301,16 +299,12 @@ def iterative_hmmsearch(query, wdir='/home/renzirui/Analysis/hmmsearch_final', n
         except FileExistsError:
             sys.stderr.write(curtime()+'[WARN] path %s exists, content will be overwritten!\n' % hmmbuild_msa_path)
         _num_seq = 0
-        for _count, file in enumerate(glob(cdhit_path + '/*.clstr')):
+        for _count, file in enumerate(glob.glob(cdhit_path + '/*.clstr')):
             dfclus = seqtools.read_cdhit(file, '0.8')
             profile = '.'.join(file.split('/')[-1].split('.')[:-1])
             keepseqid = list(dfclus.loc[dfclus['Cluster_Sign_0.8']=='*','Sequence_ID'])
             _num_seq += len(keepseqid)
-            '''
-            if i > 1:
-                seqkit_grep(keepseqid, os.path.join(iter_wdir,'sto2fas', profile+'_iter%d.aln'%(i-1)), os.path.join(hmmbuild_msa_path, profile+'_iter%d.aln'%i))
-            else:
-            '''
+
             seqkit_grep(keepseqid, os.path.join(iter_wdir,'sto2fas', profile+'.aln'), os.path.join(hmmbuild_msa_path, '_'.join(profile.split('_')[:-1])+'_iter%d.aln'%i))
 
         _t8 = time.time()
@@ -323,7 +317,7 @@ def iterative_hmmsearch(query, wdir='/home/renzirui/Analysis/hmmsearch_final', n
         except FileExistsError:
             sys.stderr.write(curtime()+'[WARN] path %s exists, content will be overwritten!\n' % hmmbuild_path)
         bar2 = progressbar.ProgressBar(widgets=[curtime(), '[INFO] hmmbuild running on profile ',progressbar.SimpleProgress(), ' (', progressbar.Percentage(), ')'])
-        for file in bar2(glob(hmmbuild_msa_path+'/*')):
+        for file in bar2(glob.glob(hmmbuild_msa_path+'/*')):
             fileprefix = file.split('/')[-1]
             code = os.system('hmmbuild {hmm_prefix}.hmm {msa_prefix} > {hmm_prefix}.log 2>&1'.format(hmm_prefix=os.path.join(hmmbuild_path, fileprefix), msa_prefix=os.path.join(hmmbuild_msa_path, fileprefix)))
             if code:
