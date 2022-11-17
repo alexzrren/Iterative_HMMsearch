@@ -227,7 +227,7 @@ def iterative_hmmsearch(query, wdir='/home/renzirui/Analysis/hmmsearch_final', n
         #Step00. hmmpress
         _t0 = time.time()
         hmmpress_cleanup("{wdir}/builded_hmm/iter{last_iter}_full.hmm.*".format(wdir=wdir, last_iter=str(i-1)))
-        code = os.system('/home/renzirui/miniconda3/bin/hmmpress {wdir}/builded_hmm/iter{last_iter}_full.hmm > /dev/null 2>&1'.format(wdir=wdir, last_iter=str(i-1)))
+        code = os.system('hmmpress {wdir}/builded_hmm/iter{last_iter}_full.hmm > /dev/null 2>&1'.format(wdir=wdir, last_iter=str(i-1)))
         if code:
             sys.stderr.write(curtime()+'[ERRO] hmmpress exit with code %d\n'%code)
             sys.exit(1)
@@ -237,7 +237,7 @@ def iterative_hmmsearch(query, wdir='/home/renzirui/Analysis/hmmsearch_final', n
 
         #Step01. hmmsearch_run
         _t2 = time.time()
-        code = os.system('/home/renzirui/miniconda3/bin/hmmsearch --cpu {ncpu} -E 1e-10 -o /dev/null -A {wdir}/Iteration_{iter}/hmmsearch.aln --tblout {wdir}/Iteration_{iter}/hmmsearch.tblout --domtblout {wdir}/Iteration_{iter}/hmmsearch.domtblout {wdir}/builded_hmm/iter{last_iter}_full.hmm {query}'.format(ncpu=ncpu, wdir=wdir, query=query, iter=i, last_iter=i-1))
+        code = os.system('hmmsearch --cpu {ncpu} -E 1e-10 -o /dev/null -A {wdir}/Iteration_{iter}/hmmsearch.aln --tblout {wdir}/Iteration_{iter}/hmmsearch.tblout --domtblout {wdir}/Iteration_{iter}/hmmsearch.domtblout {wdir}/builded_hmm/iter{last_iter}_full.hmm {query}'.format(ncpu=ncpu, wdir=wdir, query=query, iter=i, last_iter=i-1))
         _t3 = time.time()
         (code, stdout, _) = runcommand("cat %s/hmmsearch.domtblout | grep -v '#' | awk '{print $1}' | sort -u | wc -l" % (iter_wdir))
         num_hitseq = stdout.decode().strip()
