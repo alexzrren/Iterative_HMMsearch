@@ -211,9 +211,13 @@ def preprocess(query, output, hmmdb):
     if not os.path.exists(builded_hmm_path):
         os.mkdir(builded_hmm_path)
     with open(hmmdb) as fdin:
-        with open(os.path.join(buildedhmm_path, 'iter0_full.hmm')) as fdout:
-            for line in fdin.splitlines
-            
+        with open(os.path.join(buildedhmm_path, 'iter0_full.hmm'), 'w') as fdout:
+            for line in fdin.readlines():
+                if line.startswith('NAME') and not line.strip().endswith('_iter0'):
+                    fdout.write(line.strip() + '_iter0\n')
+                else:
+                    fdout.write(line)
+                
     clean_query = os.path.join(output, query.split('/')[-1])
     seqtools.clean_fasta(query, clean_query)
     sys.stderr.write(curtime()+'[INFO] sequence header cleanup done\n')
