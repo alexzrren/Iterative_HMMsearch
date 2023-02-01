@@ -178,7 +178,7 @@ def cov_calc(range1, range2):
     return cov
 
 
-def rdrp_covfilter(domtblout, coverage=0.75):
+def rdrp_covfilter(domtblout, coverage):
     dfhmm = pd.read_table(domtblout, comment='#', header=None, delim_whitespace=True)
     dfhmm.columns = 'target_name target_accession tlen query_name query_accession qlen seq_evalue seq_score seq_bias domain_# domain_of domain_c-evalue domain_i-evalue domain_score domain_bias hmm_start hmm_end aln_start aln_end env_start env_end acc desc'.split()
     resultlist = []
@@ -210,14 +210,17 @@ def preprocess(query, output, hmmdb):
     builded_hmm_path = os.path.join(output, 'builded_hmm')
     if not os.path.exists(builded_hmm_path):
         os.mkdir(builded_hmm_path)
-    os.system('cp {hmmdb} {buildedhmm_path}/iter0_full.hmm'.format(hmmdb=hmmdb, buildedhmm_path=builded_hmm_path))
+    with open(hmmdb) as fdin:
+        with open(os.path.join(buildedhmm_path, 'iter0_full.hmm')) as fdout:
+            for line in fdin.splitlines
+            
     clean_query = os.path.join(output, query.split('/')[-1])
     seqtools.clean_fasta(query, clean_query)
     sys.stderr.write(curtime()+'[INFO] sequence header cleanup done\n')
     return clean_query
     
 
-def iterative_hmmsearch(query, wdir='/home/renzirui/Analysis/hmmsearch_final', ncpu=4, iteration_num=10):
+def iterative_hmmsearch(query, wdir='/home/renzirui/Analysis/hmmsearch_final', ncpu, iteration_num, evalue, motifcov):
     sys.stderr.write('-----------------------Iterative_hmmsearch-------------------------\n')
 
     for i in range(1, iteration_num+1):
@@ -241,7 +244,7 @@ def iterative_hmmsearch(query, wdir='/home/renzirui/Analysis/hmmsearch_final', n
 
         #Step01. hmmsearch_run
         _t2 = time.time()
-        code = os.system('hmmsearch --cpu {ncpu} -E 1e-10 -o /dev/null -A {wdir}/Iteration_{iter}/hmmsearch.aln --tblout {wdir}/Iteration_{iter}/hmmsearch.tblout --domtblout {wdir}/Iteration_{iter}/hmmsearch.domtblout {wdir}/builded_hmm/iter{last_iter}_full.hmm {query}'.format(ncpu=ncpu, wdir=wdir, query=query, iter=i, last_iter=i-1))
+        code = os.system('hmmsearch --cpu {ncpu} -E {evalue} -o /dev/null -A {wdir}/Iteration_{iter}/hmmsearch.aln --tblout {wdir}/Iteration_{iter}/hmmsearch.tblout --domtblout {wdir}/Iteration_{iter}/hmmsearch.domtblout {wdir}/builded_hmm/iter{last_iter}_full.hmm {query}'.format(ncpu=ncpu, evalue=evalue, wdir=wdir, query=query, iter=i, last_iter=i-1))
         _t3 = time.time()
         (code, stdout, _) = runcommand("cat %s/hmmsearch.domtblout | grep -v '#' | awk '{print $1}' | sort -u | wc -l" % (iter_wdir))
         num_hitseq = stdout.decode().strip()
@@ -259,13 +262,13 @@ def iterative_hmmsearch(query, wdir='/home/renzirui/Analysis/hmmsearch_final', n
         sys.stderr.write(curtime()+"[INFO] Converted %d records from STOCKHOLM format to FASTA (Time Elapsed: %.3fs)\n" % (count, _t4-_t3))
 
         ##Step02.2 Confirm RdRp Motifs(>80% cov sequence will be kept)
-        filtered_df = rdrp_covfilter(iter_wdir+'/hmmsearch.domtblout', coverage=0.75)
+        filtered_df = rdrp_covfilter(iter_wdir+'/hmmsearch.domtblout', motifcov)
         filtered_df.to_csv(os.path.join(iter_wdir,'profile_covstat.tsv'), sep='\t', index=None)
         
         #print(filtered_df)
         num_filtered = len(filtered_df['target_name'].drop_duplicates())
         _t5 = time.time()
-        sys.stderr.write(curtime()+"[INFO] %d sequences covered >75%% RdRp motif region (Time Elapsed: %.3fs)\n" % (num_filtered, _t5-_t4))
+        sys.stderr.write(curtime()+"[INFO] %d sequences covered >%d%% RdRp motif region (Time Elapsed: %.3fs)\n" % (num_filtered, int(100*motifcov), _t5-_t4))
 
         ##Step02.3 Fetch Confirmed Sequences
         num_profile, num_seq = 0, 0
