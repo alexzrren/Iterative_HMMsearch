@@ -224,7 +224,7 @@ def preprocess(query, output, hmmdb):
     return clean_query
     
 
-def iterative_hmmsearch(query, wdir='/home/renzirui/Analysis/hmmsearch_final', ncpu, iteration_num, evalue, motifcov):
+def iterative_hmmsearch(query, wdir, ncpu, iteration_num, evalue, motifcov):
     sys.stderr.write('-----------------------Iterative_hmmsearch-------------------------\n')
 
     for i in range(1, iteration_num+1):
