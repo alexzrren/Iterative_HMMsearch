@@ -24,7 +24,7 @@ def main():
         sys.exit(1)
     printargs(args)
     cleanquery = preprocess(args.query, args.output, args.hmmdb)
-    iterative_hmmsearch(cleanquery, args.output, args.threads, args.iteration)
+    iterative_hmmsearch(cleanquery, args.output, args.threads, args.iteration, args.evalue, args.motifcov)
     
 
 def argcheck(args):
