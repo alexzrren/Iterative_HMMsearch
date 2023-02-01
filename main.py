@@ -211,7 +211,7 @@ def preprocess(query, output, hmmdb):
     if not os.path.exists(builded_hmm_path):
         os.mkdir(builded_hmm_path)
     with open(hmmdb) as fdin:
-        with open(os.path.join(buildedhmm_path, 'iter0_full.hmm'), 'w') as fdout:
+        with open(os.path.join(builded_hmm_path, 'iter0_full.hmm'), 'w') as fdout:
             for line in fdin.readlines():
                 if line.startswith('NAME') and not line.strip().endswith('_iter0'):
                     fdout.write(line.strip() + '_iter0\n')
