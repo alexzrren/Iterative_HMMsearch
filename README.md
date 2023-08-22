@@ -1,6 +1,6 @@
-[![Static Badge](https://img.shields.io/badge/IORI-GPD-brightgreen?style=flat-square&logo=gitlab)](https://gitlab.genomics.cn/iori/gvd)![Static Badge](https://img.shields.io/badge/status-developing-orange?style=flat-square)![Static Badge](https://img.shields.io/badge/Workflow-red?style=flat-square)
+[![Static Badge](https://img.shields.io/badge/IORI-GPD-brightgreen?style=flat-square&logo=gitlab)](https://gitlab.genomics.cn/iori/gvd) ![Static Badge](https://img.shields.io/badge/status-developing-orange?style=flat-square) ![Static Badge](https://img.shields.io/badge/Workflow-red?style=flat-square)
 
-# Workflow _IterativeHMM_VirusIdentification
+# Workflow_IterativeHMM_VirusIdentification
 
 # Table of Contents
 
@@ -20,7 +20,7 @@ Previous studies on viral genomes were primarily focused on using BLAST homology
 
 However, this approach still lacks sensitivity when it comes to highly novel viruses or those that are distantly related to known ones. Therefore, in recent years, two articles published in Science and Cell have employed an iterative HMM search method to significantly enhance the sensitivity of virus discovery.
 
-
+Therefore, this repository has established a workflow based on iterative HMM search. With manually curated both the RdRp-profile used in the Cell article[[1](#ref1)] and RdRp-scan article[[2](#ref2)], as well as the profiles of DNA viral replication-related proteins capable of infecting vertebrates. These profiles and this workflow is utilized to explore distantly related viruses or distant protein domains. (any protein profile can also be input of the workflow)
 
 # Installation
 ## Dependencies
@@ -162,8 +162,8 @@ Author:Zirui Ren <renzirui@genomics.cn>
 
 # References
 
-1. Neri U, Wolf YI, Roux S, Camargo AP, Lee B, Kazlauskas D, et al. Expansion of the global RNA virome reveals diverse clades of bacteriophages. Cell. 2022 Oct;185(21):4023-4037.e18. (DOI:[10.1016/j.cell.2022.08.023](https://doi.org/10.1016/j.cell.2022.08.023))
-2. Charon, Justine, et al. "RdRp-scan: A bioinformatic resource to identify and annotate divergent RNA viruses in metagenomic sequence data." *Virus Evolution* 8.2 (2022): veac082. (DOI:[10.1093/ve/veac082](https://doi.org/10.1093/ve/veac082))
+1. <a name="ref1"></a>Neri U, Wolf YI, Roux S, Camargo AP, Lee B, Kazlauskas D, et al. Expansion of the global RNA virome reveals diverse clades of bacteriophages. Cell. 2022 Oct;185(21):4023-4037.e18. (DOI:[10.1016/j.cell.2022.08.023](https://doi.org/10.1016/j.cell.2022.08.023))
+2. <a name="ref2"></a>Charon, Justine, et al. "RdRp-scan: A bioinformatic resource to identify and annotate divergent RNA viruses in metagenomic sequence data." *Virus Evolution* 8.2 (2022): veac082. (DOI:[10.1093/ve/veac082](https://doi.org/10.1093/ve/veac082))
 
 # License
 
