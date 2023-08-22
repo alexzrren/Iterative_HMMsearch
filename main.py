@@ -5,11 +5,11 @@ import glob
 import time
 import pandas as pd
 from Bio import SeqIO
-import progressbar
 import argparse
 import subprocess
 # import custom scripts
 sys.path.append(os.path.join(os.path.split(sys.argv[0])[0], "modules/"))
+import progressbar
 import hmmtools
 import seqtools
 
@@ -92,7 +92,7 @@ def prerequisites():
 
 
 def printargs(args):
-    print('IterativeHMM_RdRpFinder v0.2a\n\nAuthor:Zirui Ren <renzirui@genomics.cn>\n\n###  alpha version  ###\n')
+    print('IterativeHMM_Searcher v0.2a\n\nAuthor:Zirui Ren <renzirui@genomics.cn>\n\n###  alpha version  ###\n')
     print('='*35+'\n'+"       Search Configurations\n"+'—'*35)
     print("%+13s%s%s" % ('Query',' : ', args.query))
     print("%+13s%s%s" %("Output"," : ", args.output))
@@ -178,7 +178,7 @@ def cov_calc(range1, range2):
     return cov
 
 
-def rdrp_covfilter(domtblout, coverage=0.75):
+def rdrp_covfilter(domtblout, coverage=0.3):
     dfhmm = pd.read_table(domtblout, comment='#', header=None, delim_whitespace=True)
     dfhmm.columns = 'target_name target_accession tlen query_name query_accession qlen seq_evalue seq_score seq_bias domain_# domain_of domain_c-evalue domain_i-evalue domain_score domain_bias hmm_start hmm_end aln_start aln_end env_start env_end acc desc'.split()
     resultlist = []
