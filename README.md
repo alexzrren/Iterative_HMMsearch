@@ -1,6 +1,8 @@
-[![Static Badge](https://img.shields.io/badge/IORI-GPD-brightgreen?style=flat-square&logo=gitlab)](https://gitlab.genomics.cn/iori/gvd) ![Static Badge](https://img.shields.io/badge/status-developing-orange?style=flat-square) ![Static Badge](https://img.shields.io/badge/Workflow-red?style=flat-square)
+[![Static Badge](https://img.shields.io/badge/IORI-GPD-brightgreen?style=flat-square&logo=gitlab)](https://gitlab.genomics.cn/iori/gvd)  
 
 # Workflow_IterativeHMM_VirusIdentification
+
+![Static Badge](https://img.shields.io/badge/status-developing-orange?style=flat-square)![Static Badge](https://img.shields.io/badge/Workflow-red?style=flat-square)
 
 # Table of Contents
 
@@ -65,6 +67,12 @@ optional arguments:
 ```
 ## Input files
 - Amino acid sequence(FASTA Format): Predicted & translated amino acid sequence from ORF of viral genome (when using to identify putative viral sequence)
+> Amino acid sequence can be generated or predicted using getorf of the EMBOSS software kit, for example:
+>
+> ```shell
+> $ getorf -sequence <INPUT_NUCL> -outseq <OUTPUT_PROT> -find 0 -table 1 -minsize 600
+> ```
+
 ## Output files
 
 ### Output file tree
