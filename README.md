@@ -2,7 +2,7 @@
 
 # Workflow_IterativeHMM_VirusIdentification
 
-![Static Badge](https://img.shields.io/badge/status-developing-orange?style=flat-square)![Static Badge](https://img.shields.io/badge/Workflow-red?style=flat-square)
+![Static Badge](https://img.shields.io/badge/status-developing-orange?style=flat-square)   ![Static Badge](https://img.shields.io/badge/Workflow-red?style=flat-square)
 
 # Table of Contents
 
@@ -22,7 +22,7 @@ Previous studies on viral genomes were primarily focused on using BLAST homology
 
 However, this approach still lacks sensitivity when it comes to highly novel viruses or those that are distantly related to known ones. Therefore, in recent years, two articles published in Science and Cell have employed an iterative HMM search method to significantly enhance the sensitivity of virus discovery.
 
-Therefore, this repository has established a workflow based on iterative HMM search. With manually curated both the RdRp-profile used in the Cell article[[1](#ref1)] and RdRp-scan article[[2](#ref2)], as well as the profiles of DNA viral replication-related proteins capable of infecting vertebrates. These profiles and this workflow is utilized to explore distantly related viruses or distant protein domains. (any protein profile can also be input of the workflow)
+Therefore, this repository has established a workflow based on iterative HMM search. With manually curated both the RdRp-profile used in the Cell article[[1](#ref1)] and RdRp-scan article[[2](#ref2)], as well as the profiles of vertebrate-infecting viral family DNA viral replication-related proteins from Pfam database. These profiles and this workflow is utilized to explore distantly related viruses or distant protein domains. (any protein profile can also be input of the workflow)
 
 # Installation
 ## Dependencies
