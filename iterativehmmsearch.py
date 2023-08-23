@@ -93,7 +93,7 @@ def prerequisites():
 
 def printargs(args):
     print('IterativeHMM_Searcher v0.2a\n\nAuthor:Zirui Ren <renzirui@genomics.cn>\n\n###  alpha version  ###\n')
-    print('='*35+'\n'+"       Search Configurations\n"+'—'*35)
+    print('='*35+'\n'+"       Search Configurations\n"+'-'*35)
     print("%+13s%s%s" % ('Query',' : ', args.query))
     print("%+13s%s%s" %("Output"," : ", args.output))
     print("%+13s%s%s" %("HMMdb"," : ", args.hmmdb))
