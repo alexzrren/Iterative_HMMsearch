@@ -121,12 +121,16 @@ output_rna_v1/
 
 
 ## Running test
-[**Not finished yet**] Full demo running script show in <./example/launch.py>, demo input sample-list is <./example/sample_list> 
+Demo input file and correspondent output file is located in `testdata/` directory, script is saved in `testdata/run_test.sh`
+
+Below is a terminal snapshot for reference:
 
 ```bash
-$ python -u /data/user/renzirui/Coding/iterativehmmsearch/main.py -q wildbirds.gt200.orfs.faa -d rdrpscan_rvmt_fullv2.hmm -o output_rna_v1 --threads 36
+$ getorf -find 0 -table 1 -minsize 600 -sequence <(zcat metatranscriptomic_assembly.fna.gz) -outseq metatranscriptomic_assembly.faa
+Find and extract open reading frames (ORFs)
 
-IterativeHMM_RdRpFinder v0.2a
+$ python ../iterativehmmsearch.py -q metatranscriptomic_assembly.getorf.faa -o test_rna_out -d rdrpscan_full.hmm --threads 24
+IterativeHMM_Searcher v0.2a
 
 Author:Zirui Ren <renzirui@genomics.cn>
 
@@ -135,37 +139,42 @@ Author:Zirui Ren <renzirui@genomics.cn>
 ===================================
        Search Configurations
 ———————————————————————————————————
-        Query : /jdfssz1/ST_HEALTH/P20Z10200N0206/renzirui/WildBirds/Assembly/wildbirds.gt200.orfs.faa
-       Output : /data/user/renzirui/Projects/Wildbirds/VirusIdentification/output_rna_v1
-        HMMdb : /data/user/renzirui/IterativeHMMsearch/rdrpscan_rvmt_fullv2.hmm
-      Threads : 36
+        Query : metatranscriptomic_assembly.getorf.faa
+       Output : test_rna_out
+        HMMdb : rdrpscan_full.hmm
+      Threads : 24
  IterationNum : 10
      MotifCov : 0.75
     IterStart : 1
 ===================================
-
 [INFO] Output directory created
-16:43:48   [INFO] sequence header cleanup done
+14:22:39   [INFO] sequence header cleanup done
 -----------------------Iterative_hmmsearch-------------------------
 ##Iteration 1
-16:43:48   [INFO] hmmpress done (Time Elapsed: 0.610s)
-16:43:48   [INFO] HMM search iteration 1 running...
-17:00:27   [INFO] hmmsearch done, 3032 sequences hit (Time Elapsed: 998.240s)
-17:00:27   [INFO] Successfully read STOCKHOLM MSA of 134 profiles
-17:00:29   [INFO] Converted 134 records from STOCKHOLM format to FASTA (Time Elapsed: 2.859s)
-17:00:49   [INFO] 2040 sequences covered >75% RdRp motif region (Time Elapsed: 19.330s)
-17:00:52   [INFO] 2040 sequences from 50 profiles after filtering written to FASTA (Time Elapsed: 3.355s)
-17:00:52   [INFO] cd-hit clustering profile 50 of 50 (100%)
-17:00:59   [INFO] cd-hit done (Time Elapsed: 7.110s)
-17:01:04   [INFO] 1269 MSA seqs for 50 profiles fetched (Time Elapsed: 4.328s)
-17:01:04   [INFO] hmmbuild running on profile 50 of 50 (100%)
-17:01:22   [INFO] Full iterative hmm file written to /data/user/renzirui/Projects/Wildbirds/VirusIdentification/output_rna_v1/builded_hmm/iter1_full.hmm
-17:01:22   [INFO] hmmbuild done (Time Elapsed: 18.015s)
-17:01:22   [INFO] Iteration 1 finished (Time Elapsed: 1053.236s)
-
-....
+14:22:39   [INFO] hmmpress done (Time Elapsed: 0.068s)
+14:22:39   [INFO] HMM search iteration 1 running...
+14:22:54   [INFO] hmmsearch done, 2565 sequences hit (Time Elapsed: 14.589s)
+14:22:54   [INFO] Successfully read STOCKHOLM MSA of 32 profiles
+14:22:54   [INFO] Converted 32 records from STOCKHOLM format to FASTA (Time Elapsed: 0.483s)
+14:22:59   [INFO] 2179 sequences covered >75% RdRp motif region (Time Elapsed: 4.941s)
+14:23:01   [INFO] 2179 sequences from 25 profiles after filtering written to FASTA (Time Elapsed: 2.412s)
+14:23:01   [INFO] cd-hit clustering profile 25 of 25 (100%)
+14:23:06   [INFO] cd-hit done (Time Elapsed: 4.210s)
+14:23:08   [INFO] 1244 MSA seqs for 25 profiles fetched (Time Elapsed: 2.570s)
+14:23:08   [INFO] hmmbuild running on profile 25 of 25 (100%)
+14:23:13   [INFO] Full iterative hmm file written to test_rna_out/builded_hmm/iter1_full.hmm
+14:23:13   [INFO] hmmbuild done (Time Elapsed: 5.255s)
+14:23:13   [INFO] Iteration 1 finished (Time Elapsed: 34.460s)
+...
 ```
+Any question or bug and also suggestions when executing this workflow are welcomed to create a issue here:
+
+ [Issues · IORI / GPD / Workflow_IterativeHMM_VirusIdentification · GitLab (genomics.cn)](https://gitlab.genomics.cn/iori/gvd/Workflow_IterativeHMM_VirusIdentification/-/issues)
+
+
+
 # Maintainers
+
 [任梓睿](https://gitlab.genomics.cn/renzirui)
 
 # References
