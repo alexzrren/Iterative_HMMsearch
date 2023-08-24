@@ -43,7 +43,7 @@ Therefore, this repository has established a workflow based on iterative HMM sea
 
 ## Linux installation
 ```bash
-$ git clone ssh://git@gitlab.genomics.cn:2200/renzirui/iterativehmmsearch.git
+$ git clone ssh://git@gitlab.genomics.cn:2200/iori/gvd/Workflow_IterativeHMM_VirusIdentification.git
 ```
 # Usage
 ```bash
