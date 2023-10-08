@@ -1,6 +1,7 @@
 import sys
 import os
 import datetime
+import time
 import glob
 import time
 import pandas as pd
@@ -145,7 +146,7 @@ def stockholm2fasta_perprofile(stockholmfile, outdir):
     count = 0
     for stockholmblock in stockholm2blocks(stockholmfile): 
         stockholmblockid = stockholmblock.splitlines()[1].split()[-1]
-        stockholmblockfile = os.path.join(outdir, '.tmp_stockholm')
+        stockholmblockfile = os.path.join(outdir, '.tmp_stockholm_%d' % int(time.time()*1e7))
         with open(stockholmblockfile,'w') as fdout:
             fdout.write(stockholmblock)
         outfasta = os.path.join(outdir, stockholmblockid + '.aln')
@@ -197,9 +198,10 @@ def rdrp_covfilter(domtblout, coverage):
 
 
 def seqkit_grep(seqid_list, fastain, fastaout):
-    with open('.tmpseqid.list', 'w') as fdout:
+    tmpid = str(int(time.time()*1e7))
+    with open('.tmpseqid_%s.list' % tmpid, 'w') as fdout:
         fdout.writelines(list(map(lambda x: x+'\n',seqid_list)))
-    (code, _, stderr) = runcommand("cat %s | sed 's/\/.*$//g' | seqkit grep -f .tmpseqid.list > %s" % (fastain, fastaout))
+    (code, _, stderr) = runcommand("cat %s | sed 's/\/.*$//g' | seqkit grep -f .tmpseqid_%s.list > %s" % (fastain, tmpid, fastaout))
     if code:
         sys.stderr.write(curtime()+'[ERRO] seqkit exit with code %d\n' % code)
         sys.stderr.write(stderr.decode())
