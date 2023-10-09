@@ -206,6 +206,8 @@ def seqkit_grep(seqid_list, fastain, fastaout):
         sys.stderr.write(curtime()+'[ERRO] seqkit exit with code %d\n' % code)
         sys.stderr.write(stderr.decode())
         sys.exit(1)
+    else:
+        os.remove('.tmpseqid_%s.list' % tmpid)
 
 
 def preprocess(query, output, hmmdb):
