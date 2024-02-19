@@ -6,6 +6,7 @@ import glob
 import time
 import pandas as pd
 from Bio import SeqIO
+from io import StringIO
 import argparse
 import subprocess
 # import custom scripts
@@ -122,7 +123,7 @@ def parse_palmfev(fevfile):
         region_dict = dict()
         for line in fd.read().splitlines():
             linedict = dict(tuple(i.split('=')) for i in line.split())
-            linedict['pp_region'] = linedict['pp_start']+':'+linedict['pp_end']
+            linedict['pp_region'] = linedict['pp_start'] + ':' + linedict['pp_end']
             region_dict[linedict['query']] = linedict
     return region_dict
 
@@ -144,18 +145,28 @@ def stockholm2blocks(stockholmfile):
 
 def stockholm2fasta_perprofile(stockholmfile, outdir):
     count = 0
-    for stockholmblock in stockholm2blocks(stockholmfile): 
+    for stockholmblock in stockholm2blocks(stockholmfile):
         stockholmblockid = stockholmblock.splitlines()[1].split()[-1]
-        stockholmblockfile = os.path.join(outdir, '.tmp_stockholm_%d' % int(time.time()*1e7))
-        with open(stockholmblockfile,'w') as fdout:
-            fdout.write(stockholmblock)
+        massive = False
+        if stockholmblockid == '"<seq#>|"':
+            stockholmblockid = stockholmblock.splitlines()[2].split()[-1]
+            massive = True
+        stockholmblockfh = StringIO(stockholmblock)
         outfasta = os.path.join(outdir, stockholmblockid + '.aln')
-        records = SeqIO.parse(stockholmblockfile, "stockholm")
-        SeqIO.write(records, outfasta, "fasta")
+        records = SeqIO.parse(stockholmblockfh, "stockholm")
+        print(records)
+        if massive:
+            fasta_fd = StringIO()
+            SeqIO.write(records, fasta_fd, "fasta")
+            fasta_fd.seek(0)
+            origfasta_str = fasta_fd.read()
+            parsedfasta_str = '>'.join(list(map(lambda x: '|'.join(x.split('|')[1:]), origfasta_str.split('>'))))
+            with open(outfasta, 'w') as fastaout_fd:
+                fastaout_fd.write(parsedfasta_str)
+        else:
+            SeqIO.write(records, outfasta, "fasta")
         seqtools.msa2fasta(outfasta, os.path.join(outdir, stockholmblockid + '.fa'))
         count += 1
-        
-    os.remove(stockholmblockfile)
     return count
 
 def hmmpress_cleanup(globpath):
